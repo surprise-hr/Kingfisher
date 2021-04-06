@@ -196,9 +196,8 @@ struct KFImageRenderer: View {
     }
 
     private func imageFromResult(_ resultImage: KFCrossPlatformImage) -> Image {
-        if #available(macOS 11.0, iOS 14.0, watchOS 7.0, tvOS 14.0, *) {
-            return Image(crossPlatformImage: resultImage)
-        } else {
+        
+        if let cgImage = resultImage.kf.cgImage {
             #if canImport(UIKit)
             // The CG image is used to solve #1395
             // It should be not necessary if SwiftUI.Image can handle resizing correctly when created
@@ -207,15 +206,12 @@ struct KFImageRenderer: View {
             // https://github.com/onevcat/Kingfisher/issues/1395
             //
             // This issue happens on iOS 13 and was fixed by Apple from iOS 14.
-            if let cgImage = resultImage.cgImage {
-                return Image(decorative: cgImage, scale: resultImage.scale, orientation: resultImage.imageOrientation.toSwiftUI())
-            } else {
-                return Image(crossPlatformImage: resultImage)
-            }
+            return Image(decorative: cgImage, scale: resultImage.scale, orientation: resultImage.imageOrientation.toSwiftUI())
             #else
             return Image(crossPlatformImage: resultImage)
             #endif
-
+        } else {
+            return Image(crossPlatformImage: resultImage)
         }
     }
 }
