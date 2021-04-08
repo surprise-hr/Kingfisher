@@ -24,6 +24,8 @@
 		4BE688F822FD513700B11168 /* WKInterfaceImage+Kingfisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12AB6AF215D2BB50013BA68 /* WKInterfaceImage+Kingfisher.swift */; };
 		82054D0E261DB611007357BB /* LottieImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82054D0D261DB611007357BB /* LottieImageView.swift */; };
 		82054D17261DCC9E007357BB /* librlottie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 82054D15261DCC98007357BB /* librlottie.framework */; };
+		82054D1E261DD4CD007357BB /* LottieImageView+Animator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82054D1D261DD4CD007357BB /* LottieImageView+Animator.swift */; };
+		82054E17261EE933007357BB /* LottieImageView+AnimatedFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82054E16261EE933007357BB /* LottieImageView+AnimatedFrame.swift */; };
 		C9286407228584EB00257182 /* ImageProgressive.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9286406228584EB00257182 /* ImageProgressive.swift */; };
 		D1132C9725919F69003E528D /* KFOptionsSetter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1132C9625919F69003E528D /* KFOptionsSetter.swift */; };
 		D11D9B72245FA6F700C5A0AE /* RetryStrategy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11D9B71245FA6F700C5A0AE /* RetryStrategy.swift */; };
@@ -146,6 +148,8 @@
 		4BD821662189FD330084CC21 /* SessionDataTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDataTask.swift; sourceTree = "<group>"; };
 		82054D0D261DB611007357BB /* LottieImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieImageView.swift; sourceTree = "<group>"; };
 		82054D15261DCC98007357BB /* librlottie.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = librlottie.framework; path = Carthage/Build/iOS/librlottie.framework; sourceTree = "<group>"; };
+		82054D1D261DD4CD007357BB /* LottieImageView+Animator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LottieImageView+Animator.swift"; sourceTree = "<group>"; };
+		82054E16261EE933007357BB /* LottieImageView+AnimatedFrame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LottieImageView+AnimatedFrame.swift"; sourceTree = "<group>"; };
 		C9286406228584EB00257182 /* ImageProgressive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageProgressive.swift; sourceTree = "<group>"; };
 		C959EEE7228940FE00467A10 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		D1132C9625919F69003E528D /* KFOptionsSetter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KFOptionsSetter.swift; sourceTree = "<group>"; };
@@ -303,6 +307,16 @@
 			path = Utils;
 			sourceTree = "<group>";
 		};
+		82054D1C261DD4B2007357BB /* Lottie */ = {
+			isa = PBXGroup;
+			children = (
+				82054D0D261DB611007357BB /* LottieImageView.swift */,
+				82054D1D261DD4CD007357BB /* LottieImageView+Animator.swift */,
+				82054E16261EE933007357BB /* LottieImageView+AnimatedFrame.swift */,
+			);
+			path = Lottie;
+			sourceTree = "<group>";
+		};
 		D10EC22C1C3D62E800A4211C /* Tests */ = {
 			isa = PBXGroup;
 			children = (
@@ -420,9 +434,9 @@
 		D12AB6BD215D2BB50013BA68 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				82054D1C261DD4B2007357BB /* Lottie */,
 				D12AB6BE215D2BB50013BA68 /* Indicator.swift */,
 				D12AB6BF215D2BB50013BA68 /* AnimatedImageView.swift */,
-				82054D0D261DB611007357BB /* LottieImageView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -785,6 +799,7 @@
 				D12AB730215D2BB50013BA68 /* AnimatedImageView.swift in Sources */,
 				4B46CC64217449E000D90C4A /* Storage.swift in Sources */,
 				D12AB6E4215D2BB50013BA68 /* Placeholder.swift in Sources */,
+				82054E17261EE933007357BB /* LottieImageView+AnimatedFrame.swift in Sources */,
 				4B46CC6921744AC500D90C4A /* DiskStorage.swift in Sources */,
 				4B46CC5F217449C600D90C4A /* MemoryStorage.swift in Sources */,
 				D16CC3D624E02E9500F1A515 /* AVAssetImageDataProvider.swift in Sources */,
@@ -823,6 +838,7 @@
 				D13646742165A1A100A33652 /* Result.swift in Sources */,
 				D1A1CC9A219FAB4B00263AD8 /* Source.swift in Sources */,
 				4BD821622189FC0C0084CC21 /* SessionDelegate.swift in Sources */,
+				82054D1E261DD4CD007357BB /* LottieImageView+Animator.swift in Sources */,
 				D12AB6E0215D2BB50013BA68 /* Filter.swift in Sources */,
 				4BE688F722FD513100B11168 /* NSButton+Kingfisher.swift in Sources */,
 				D12AB6C4215D2BB50013BA68 /* Resource.swift in Sources */,

@@ -147,6 +147,16 @@ open class LottieImageView: UIImageView {
         }
     }
 
+    public var lottieImageData: Data? {
+        didSet {
+            if lottieImageData != oldValue {
+                reset()
+            }
+            setNeedsDisplay()
+            layer.setNeedsDisplay()
+        }
+    }
+
     /// Delegate of this `LottieImageView` object. See `LottieImageViewDelegate` protocol for more.
     public weak var delegate: LottieImageViewDelegate?
 
@@ -156,7 +166,7 @@ open class LottieImageView: UIImageView {
     // MARK: - Private property
     // Dispatch queue used for preloading images.
     private lazy var preloadQueue: DispatchQueue = {
-        return DispatchQueue(label: "com.onevcat.Kingfisher.Animator.preloadQueue")
+        return DispatchQueue(label: "com.onevcat.Kingfisher.LottieAnimator.preloadQueue")
     }()
 
     // A flag to avoid invalidating the displayLink on deinit if it was never created, because displayLink is so lazy.
@@ -173,15 +183,6 @@ open class LottieImageView: UIImageView {
     }()
 
     // MARK: - Override
-    override open var image: KFCrossPlatformImage? {
-        didSet {
-            if image != oldValue {
-                reset()
-            }
-            setNeedsDisplay()
-            layer.setNeedsDisplay()
-        }
-    }
 
     deinit {
         if isDisplayLinkInitialized {
@@ -202,13 +203,6 @@ open class LottieImageView: UIImageView {
         guard !isAnimating else { return }
         guard let animator = animator else { return }
         guard !animator.isReachMaxRepeatCount else { return }
-
-        let someJSONData = Data()
-        let resourcePath = Bundle.main.resourcePath
-        let jsonString = String(data: someJSONData, encoding: .utf8)
-        let jsonDataBuffer = jsonString?.cString(using: .utf8)
-        let resourcePathBuffer = resourcePath?.cString(using: .utf8)
-        let animation = lottie_animation_from_data(jsonDataBuffer, "", resourcePathBuffer)
 
         displayLink.isPaused = false
     }
@@ -247,10 +241,10 @@ open class LottieImageView: UIImageView {
     // Reset the animator.
     private func reset() {
         animator = nil
-        if let imageSource = image?.kf.imageSource {
+        if let imageData = lottieImageData {
             let targetSize = bounds.scaled(UIScreen.main.scale).size
             let animator = Animator(
-                imageSource: imageSource,
+                imageData: imageData,
                 contentMode: contentMode,
                 size: targetSize,
                 framePreloadCount: framePreloadCount,
@@ -317,263 +311,6 @@ protocol LottieAnimatorDelegate: AnyObject {
 extension LottieImageView: LottieAnimatorDelegate {
     func animator(_ animator: Animator, didPlayAnimationLoops count: UInt) {
         delegate?.animatedImageView(self, didPlayAnimationLoops: count)
-    }
-}
-
-extension LottieImageView {
-
-    // Represents a single frame in a GIF.
-    struct AnimatedFrame {
-
-        // The image to display for this frame. Its value is nil when the frame is removed from the buffer.
-        let image: UIImage?
-
-        // The duration that this frame should remain active.
-        let duration: TimeInterval
-
-        // A placeholder frame with no image assigned.
-        // Used to replace frames that are no longer needed in the animation.
-        var placeholderFrame: AnimatedFrame {
-            return AnimatedFrame(image: nil, duration: duration)
-        }
-
-        // Whether this frame instance contains an image or not.
-        var isPlaceholder: Bool {
-            return image == nil
-        }
-
-        // Returns a new instance from an optional image.
-        //
-        // - parameter image: An optional `UIImage` instance to be assigned to the new frame.
-        // - returns: An `AnimatedFrame` instance.
-        func makeAnimatedFrame(image: UIImage?) -> AnimatedFrame {
-            return AnimatedFrame(image: image, duration: duration)
-        }
-    }
-}
-
-extension LottieImageView {
-
-    // MARK: - Animator
-
-    /// An animator which used to drive the data behind `LottieImageView`.
-    public class Animator {
-        private let size: CGSize
-
-        /// The maximum count of image frames that needs preload.
-        public let maxFrameCount: Int
-
-        private let imageSource: CGImageSource
-        private let maxRepeatCount: RepeatCount
-
-        private let maxTimeStep: TimeInterval = 1.0
-        private let animatedFrames = SafeArray<AnimatedFrame>()
-        private var frameCount = 0
-        private var timeSinceLastFrameChange: TimeInterval = 0.0
-        private var currentRepeatCount: UInt = 0
-
-        var isFinished: Bool = false
-
-        var needsPrescaling = true
-
-        var backgroundDecode = true
-
-        weak var delegate: LottieAnimatorDelegate?
-
-        // Total duration of one animation loop
-        var loopDuration: TimeInterval = 0
-
-        /// The image of the current frame.
-        public var currentFrameImage: UIImage? {
-            return frame(at: currentFrameIndex)
-        }
-
-        /// The duration of the current active frame duration.
-        public var currentFrameDuration: TimeInterval {
-            return duration(at: currentFrameIndex)
-        }
-
-        /// The index of the current animation frame.
-        public internal(set) var currentFrameIndex = 0 {
-            didSet {
-                previousFrameIndex = oldValue
-            }
-        }
-
-        var previousFrameIndex = 0 {
-            didSet {
-                preloadQueue.async {
-                    self.updatePreloadedFrames()
-                }
-            }
-        }
-
-        var isReachMaxRepeatCount: Bool {
-            switch maxRepeatCount {
-            case .once:
-                return currentRepeatCount >= 1
-            case .finite(let maxCount):
-                return currentRepeatCount >= maxCount
-            case .infinite:
-                return false
-            }
-        }
-
-        /// Whether the current frame is the last frame or not in the animation sequence.
-        public var isLastFrame: Bool {
-            return currentFrameIndex == frameCount - 1
-        }
-
-        var preloadingIsNeeded: Bool {
-            return maxFrameCount < frameCount - 1
-        }
-
-        var contentMode = UIView.ContentMode.scaleToFill
-
-        private lazy var preloadQueue: DispatchQueue = {
-            return DispatchQueue(label: "com.onevcat.Kingfisher.Animator.preloadQueue")
-        }()
-
-        /// Creates an animator with image source reference.
-        ///
-        /// - Parameters:
-        ///   - source: The reference of animated image.
-        ///   - mode: Content mode of the `LottieImageView`.
-        ///   - size: Size of the `LottieImageView`.
-        ///   - count: Count of frames needed to be preloaded.
-        ///   - repeatCount: The repeat count should this animator uses.
-        init(imageSource source: CGImageSource,
-             contentMode mode: UIView.ContentMode,
-             size: CGSize,
-             framePreloadCount count: Int,
-             repeatCount: RepeatCount,
-             preloadQueue: DispatchQueue) {
-            self.imageSource = source
-            self.contentMode = mode
-            self.size = size
-            self.maxFrameCount = count
-            self.maxRepeatCount = repeatCount
-            self.preloadQueue = preloadQueue
-        }
-
-        /// Gets the image frame of a given index.
-        /// - Parameter index: The index of desired image.
-        /// - Returns: The decoded image at the frame. `nil` if the index is out of bound or the image is not yet loaded.
-        public func frame(at index: Int) -> KFCrossPlatformImage? {
-            return animatedFrames[index]?.image
-        }
-
-        public func duration(at index: Int) -> TimeInterval {
-            return animatedFrames[index]?.duration  ?? .infinity
-        }
-
-        func prepareFramesAsynchronously() {
-            frameCount = Int(CGImageSourceGetCount(imageSource))
-            animatedFrames.reserveCapacity(frameCount)
-            preloadQueue.async { [weak self] in
-                self?.setupAnimatedFrames()
-            }
-        }
-
-        func shouldChangeFrame(with duration: CFTimeInterval, handler: (Bool) -> Void) {
-            incrementTimeSinceLastFrameChange(with: duration)
-
-            if currentFrameDuration > timeSinceLastFrameChange {
-                handler(false)
-            } else {
-                resetTimeSinceLastFrameChange()
-                incrementCurrentFrameIndex()
-                handler(true)
-            }
-        }
-
-        private func setupAnimatedFrames() {
-            resetAnimatedFrames()
-
-            var duration: TimeInterval = 0
-
-            (0..<frameCount).forEach { index in
-                let frameDuration = GIFAnimatedImage.getFrameDuration(from: imageSource, at: index)
-                duration += min(frameDuration, maxTimeStep)
-                animatedFrames.append(AnimatedFrame(image: nil, duration: frameDuration))
-
-                if index > maxFrameCount { return }
-                animatedFrames[index] = animatedFrames[index]?.makeAnimatedFrame(image: loadFrame(at: index))
-            }
-
-            self.loopDuration = duration
-        }
-
-        private func resetAnimatedFrames() {
-            animatedFrames.removeAll()
-        }
-
-        private func loadFrame(at index: Int) -> UIImage? {
-            let options: [CFString: Any] = [
-                kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
-                kCGImageSourceCreateThumbnailWithTransform: true,
-                kCGImageSourceShouldCacheImmediately: true,
-                kCGImageSourceThumbnailMaxPixelSize: max(size.width, size.height)
-            ]
-
-            let resize = needsPrescaling && size != .zero
-            guard let cgImage = CGImageSourceCreateImageAtIndex(imageSource,
-                                                                index,
-                                                                resize ? options as CFDictionary : nil) else {
-                return nil
-            }
-
-            let image = KFCrossPlatformImage(cgImage: cgImage)
-            return backgroundDecode ? image.kf.decoded : image
-        }
-
-        private func updatePreloadedFrames() {
-            guard preloadingIsNeeded else {
-                return
-            }
-
-            animatedFrames[previousFrameIndex] = animatedFrames[previousFrameIndex]?.placeholderFrame
-
-            preloadIndexes(start: currentFrameIndex).forEach { index in
-                guard let currentAnimatedFrame = animatedFrames[index] else { return }
-                if !currentAnimatedFrame.isPlaceholder { return }
-                animatedFrames[index] = currentAnimatedFrame.makeAnimatedFrame(image: loadFrame(at: index))
-            }
-        }
-
-        private func incrementCurrentFrameIndex() {
-            currentFrameIndex = increment(frameIndex: currentFrameIndex)
-            if isLastFrame {
-                currentRepeatCount += 1
-                if isReachMaxRepeatCount {
-                    isFinished = true
-                }
-                delegate?.animator(self, didPlayAnimationLoops: currentRepeatCount)
-            }
-        }
-
-        private func incrementTimeSinceLastFrameChange(with duration: TimeInterval) {
-            timeSinceLastFrameChange += min(maxTimeStep, duration)
-        }
-
-        private func resetTimeSinceLastFrameChange() {
-            timeSinceLastFrameChange -= currentFrameDuration
-        }
-
-        private func increment(frameIndex: Int, by value: Int = 1) -> Int {
-            return (frameIndex + value) % frameCount
-        }
-
-        private func preloadIndexes(start index: Int) -> [Int] {
-            let nextIndex = increment(frameIndex: index)
-            let lastIndex = increment(frameIndex: index, by: maxFrameCount)
-
-            if lastIndex >= nextIndex {
-                return [Int](nextIndex...lastIndex)
-            } else {
-                return [Int](nextIndex..<frameCount) + [Int](0...lastIndex)
-            }
-        }
     }
 }
 #endif
