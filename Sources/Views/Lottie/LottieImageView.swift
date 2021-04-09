@@ -109,17 +109,7 @@ open class LottieImageView: UIImageView {
     /// Whether automatically play the animation when the view become visible. Default is `true`.
     public var autoPlayAnimatedImage = true
 
-    /// The count of the frames should be preloaded before shown.
-    public var framePreloadCount = 10
-
-    /// Specifies whether the GIF frames should be pre-scaled to the image view's size or not.
-    /// If the downloaded image is larger than the image view's size, it will help to reduce some memory use.
-    /// Default is `true`.
-    public var needsPrescaling = true
-
-    /// Decode the GIF frames in background thread before using. It will decode frames data and do a off-screen
-    /// rendering to extract pixel information in background. This can reduce the main thread CPU usage.
-    public var backgroundDecode = true
+    public var useFirstFrameAsPlaceholder = true
 
     /// The animation timer's run loop mode. Default is `RunLoop.Mode.common`.
     /// Set this property to `RunLoop.Mode.default` will make the animation pause during UIScrollView scrolling.
@@ -164,9 +154,9 @@ open class LottieImageView: UIImageView {
     public private(set) var animator: Animator?
 
     // MARK: - Private property
-    // Dispatch queue used for preloading images.
-    private lazy var preloadQueue: DispatchQueue = {
-        return DispatchQueue(label: "com.onevcat.Kingfisher.LottieAnimator.preloadQueue")
+    // Dispatch queue used for rendering images from the Lottie data.
+    private lazy var renderingQueue: DispatchQueue = {
+        return DispatchQueue(label: "com.onevcat.Kingfisher.Animator.renderingQueue")
     }()
 
     // A flag to avoid invalidating the displayLink on deinit if it was never created, because displayLink is so lazy.
@@ -242,17 +232,18 @@ open class LottieImageView: UIImageView {
     private func reset() {
         animator = nil
         if let imageData = lottieImageData {
-            let targetSize = bounds.scaled(UIScreen.main.scale).size
-            let animator = Animator(
-                imageData: imageData,
-                contentMode: contentMode,
-                size: targetSize,
-                framePreloadCount: framePreloadCount,
-                repeatCount: repeatCount,
-                preloadQueue: preloadQueue)
+            let animator = Animator(imageData: imageData,
+                                    contentMode: contentMode,
+                                    repeatCount: repeatCount,
+                                    renderingQueue: renderingQueue) { [weak self] (firstFrame) in
+                guard let self = self else { return }
+                if self.useFirstFrameAsPlaceholder {
+                    DispatchQueue.main.async {
+                        self.image = firstFrame
+                    }
+                }
+            }
             animator.delegate = self
-            animator.needsPrescaling = needsPrescaling
-            animator.backgroundDecode = backgroundDecode
             animator.prepareFramesAsynchronously()
             self.animator = animator
         }

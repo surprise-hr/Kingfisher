@@ -37,10 +37,6 @@ extension LottieImageView {
 
     /// An animator which used to drive the data behind `LottieImageView`.
     public class Animator {
-        private let size: CGSize
-
-        /// The maximum count of image frames that needs preload.
-        public let maxFrameCount: Int
 
         /// The animation object that can build the contents of the Lottie resource.
         private let imageSource: OpaquePointer
@@ -52,11 +48,9 @@ extension LottieImageView {
         private var timeSinceLastFrameChange: TimeInterval = 0.0
         private var currentRepeatCount: UInt = 0
 
+        private var firstFrameCompletion: ((UIImage) -> Void)?
+
         var isFinished: Bool = false
-
-        var needsPrescaling = true
-
-        var backgroundDecode = true
 
         weak var delegate: LottieAnimatorDelegate?
 
@@ -68,25 +62,18 @@ extension LottieImageView {
             return frame(at: currentFrameIndex)
         }
 
+        /// The image of the first frame.
+        public var firstFrameImage: UIImage? {
+            return frame(at: 0)
+        }
+
         /// The duration of the current active frame duration.
         public var currentFrameDuration: TimeInterval {
             return duration(at: currentFrameIndex)
         }
 
         /// The index of the current animation frame.
-        public internal(set) var currentFrameIndex = 0 {
-            didSet {
-                previousFrameIndex = oldValue
-            }
-        }
-
-        var previousFrameIndex = 0 {
-            didSet {
-                preloadQueue.async {
-                    self.updatePreloadedFrames()
-                }
-            }
-        }
+        public internal(set) var currentFrameIndex = 0
 
         var isReachMaxRepeatCount: Bool {
             switch maxRepeatCount {
@@ -104,14 +91,10 @@ extension LottieImageView {
             return currentFrameIndex == frameCount - 1
         }
 
-        var preloadingIsNeeded: Bool {
-            return maxFrameCount < frameCount - 1
-        }
-
         var contentMode = UIView.ContentMode.scaleToFill
 
-        private lazy var preloadQueue: DispatchQueue = {
-            return DispatchQueue(label: "com.onevcat.Kingfisher.Animator.preloadQueue")
+        private lazy var renderingQueue: DispatchQueue = {
+            return DispatchQueue(label: "com.onevcat.Kingfisher.Animator.renderingQueue")
         }()
 
         /// Creates an animator with image source reference.
@@ -124,10 +107,9 @@ extension LottieImageView {
         ///   - repeatCount: The repeat count should this animator uses.
         init(imageData data: Data,
              contentMode mode: UIView.ContentMode,
-             size: CGSize,
-             framePreloadCount count: Int,
              repeatCount: RepeatCount,
-             preloadQueue: DispatchQueue) {
+             renderingQueue: DispatchQueue,
+             firstFrameCompletion: ((UIImage) -> Void)? = nil) {
 
             let resourcePath = Bundle.main.resourcePath
             let jsonString = String(data: data, encoding: .utf8)
@@ -136,14 +118,9 @@ extension LottieImageView {
             self.imageSource = lottie_animation_from_data(jsonDataBuffer, "", resourcePathBuffer)
 
             self.contentMode = mode
-            self.size = size
-            self.maxFrameCount = count
             self.maxRepeatCount = repeatCount
-            self.preloadQueue = preloadQueue
-        }
-
-        deinit {
-            lottie_animation_destroy(imageSource)
+            self.renderingQueue = renderingQueue
+            self.firstFrameCompletion = firstFrameCompletion
         }
 
         /// Gets the image frame of a given index.
@@ -160,7 +137,7 @@ extension LottieImageView {
         func prepareFramesAsynchronously() {
             frameCount = lottie_animation_get_totalframe(imageSource)
             animatedFrames.reserveCapacity(frameCount)
-            preloadQueue.async { [weak self] in
+            renderingQueue.async { [weak self] in
                 self?.setupAnimatedFrames()
             }
         }
@@ -181,24 +158,8 @@ extension LottieImageView {
             resetAnimatedFrames()
 
             let duration: TimeInterval = lottie_animation_get_duration(imageSource)
-            let fps: TimeInterval = lottie_animation_get_framerate(imageSource)
-            let frameDuration = 1 / fps
+            let frameDuration: TimeInterval = 1 / lottie_animation_get_framerate(imageSource)
 
-            (0..<frameCount).forEach { index in
-                animatedFrames.append(AnimatedFrame(image: nil, duration: frameDuration))
-
-                if index > maxFrameCount { return }
-                animatedFrames[index] = animatedFrames[index]?.makeAnimatedFrame(image: loadFrame(at: index))
-            }
-
-            self.loopDuration = duration
-        }
-
-        private func resetAnimatedFrames() {
-            animatedFrames.removeAll()
-        }
-
-        private func loadFrame(at index: Int) -> UIImage? {
             // Lottie surface use ARGB8888 Premultiplied
             let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
             let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
@@ -208,11 +169,30 @@ extension LottieImageView {
             lottie_animation_get_size(imageSource, &width, &height)
 
             guard let canvas = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace, bitmapInfo: bitmapInfo.rawValue) else {
-                return nil
+                return
             }
 
-            let opaquePtr = OpaquePointer(canvas.data)
-            let buffer = UnsafeMutablePointer<UInt32>(opaquePtr)
+            for index in 0..<frameCount {
+                let frame = loadFrame(at: index, canvas: canvas, height: height, width: width)
+                animatedFrames.append(AnimatedFrame(image: frame, duration: frameDuration))
+
+                if index == 0, let firstFrame = frame {
+                    firstFrameCompletion?(firstFrame)
+                }
+            }
+
+            // Remove image source from memory when finished decoding.
+            lottie_animation_destroy(imageSource)
+
+            self.loopDuration = duration
+        }
+
+        private func resetAnimatedFrames() {
+            animatedFrames.removeAll()
+        }
+
+        private func loadFrame(at index: Int, canvas: CGContext, height: Int, width: Int) -> UIImage? {
+            let buffer = UnsafeMutablePointer<UInt32>(OpaquePointer(canvas.data))
             lottie_animation_render(imageSource, index, buffer, width, height, canvas.bytesPerRow)
 
             guard let cgImage = canvas.makeImage() else {
@@ -220,25 +200,6 @@ extension LottieImageView {
             }
 
             return UIImage(cgImage: cgImage)
-        }
-
-        private func updatePreloadedFrames() {
-            guard preloadingIsNeeded else {
-                return
-            }
-
-            animatedFrames[previousFrameIndex] = animatedFrames[previousFrameIndex]?.placeholderFrame
-
-            preloadIndexes(start: currentFrameIndex).forEach { index in
-                guard let currentAnimatedFrame = animatedFrames[index] else { return }
-                if !currentAnimatedFrame.isPlaceholder { return }
-                animatedFrames[index] = currentAnimatedFrame.makeAnimatedFrame(image: loadFrame(at: index))
-
-                // Remove image source from memory when the last frame was decoded.
-                if index == animatedFrames.count - 1 {
-                    lottie_animation_destroy(imageSource)
-                }
-            }
         }
 
         private func incrementCurrentFrameIndex() {
@@ -262,17 +223,6 @@ extension LottieImageView {
 
         private func increment(frameIndex: Int, by value: Int = 1) -> Int {
             return (frameIndex + value) % frameCount
-        }
-
-        private func preloadIndexes(start index: Int) -> [Int] {
-            let nextIndex = increment(frameIndex: index)
-            let lastIndex = increment(frameIndex: index, by: maxFrameCount)
-
-            if lastIndex >= nextIndex {
-                return [Int](nextIndex...lastIndex)
-            } else {
-                return [Int](nextIndex..<frameCount) + [Int](0...lastIndex)
-            }
         }
     }
 }
