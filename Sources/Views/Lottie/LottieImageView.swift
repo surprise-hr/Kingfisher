@@ -232,22 +232,37 @@ open class LottieImageView: UIImageView {
     private func reset() {
         animator = nil
         if let imageData = lottieImageData {
-            let animator = Animator(imageData: imageData,
-                                    contentMode: contentMode,
-                                    repeatCount: repeatCount,
-                                    renderingQueue: renderingQueue) { [weak self] (firstFrame) in
-                guard let self = self else { return }
-                if self.useFirstFrameAsPlaceholder {
-                    DispatchQueue.main.async {
-                        self.image = firstFrame
-                    }
+            renderingQueue.async {
+                let imageSource = self.prepareImageSource(from: imageData)
+                DispatchQueue.main.async {
+                    self.setupAnimator(with: imageSource)
                 }
             }
-            animator.delegate = self
-            animator.prepareFramesAsynchronously()
-            self.animator = animator
         }
         didMove()
+    }
+
+    private func prepareImageSource(from imageData: Data) -> OpaquePointer {
+        let resourcePath = Bundle.main.resourcePath
+        let jsonString = String(data: imageData, encoding: .utf8)
+        let jsonDataBuffer = jsonString?.cString(using: .utf8)
+        let resourcePathBuffer = resourcePath?.cString(using: .utf8)
+        return lottie_animation_from_data(jsonDataBuffer, "", resourcePathBuffer)
+    }
+
+    private func setupAnimator(with imageSource: OpaquePointer) {
+        let animator = Animator(imageSource: imageSource,
+                                contentMode: self.contentMode,
+                                repeatCount: self.repeatCount,
+                                renderingQueue: self.renderingQueue) { [weak self] (firstFrame) in
+            guard let self = self else { return }
+            if self.useFirstFrameAsPlaceholder {
+                self.image = firstFrame
+            }
+        }
+        animator.delegate = self
+        animator.prepareFramesAsynchronously()
+        self.animator = animator
     }
 
     private func didMove() {

@@ -105,18 +105,12 @@ extension LottieImageView {
         ///   - size: Size of the `LottieImageView`.
         ///   - count: Count of frames needed to be preloaded.
         ///   - repeatCount: The repeat count should this animator uses.
-        init(imageData data: Data,
+        init(imageSource: OpaquePointer,
              contentMode mode: UIView.ContentMode,
              repeatCount: RepeatCount,
              renderingQueue: DispatchQueue,
              firstFrameCompletion: ((UIImage) -> Void)? = nil) {
-
-            let resourcePath = Bundle.main.resourcePath
-            let jsonString = String(data: data, encoding: .utf8)
-            let jsonDataBuffer = jsonString?.cString(using: .utf8)
-            let resourcePathBuffer = resourcePath?.cString(using: .utf8)
-            self.imageSource = lottie_animation_from_data(jsonDataBuffer, "", resourcePathBuffer)
-
+            self.imageSource = imageSource
             self.contentMode = mode
             self.maxRepeatCount = repeatCount
             self.renderingQueue = renderingQueue
@@ -177,7 +171,9 @@ extension LottieImageView {
                 animatedFrames.append(AnimatedFrame(image: frame, duration: frameDuration))
 
                 if index == 0, let firstFrame = frame {
-                    firstFrameCompletion?(firstFrame)
+                    DispatchQueue.main.async {
+                        self.firstFrameCompletion?(firstFrame)
+                    }
                 }
             }
 
