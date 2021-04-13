@@ -167,12 +167,12 @@ extension LottieImageView {
             }
 
             for index in 0..<frameCount {
-                let frame = loadFrame(at: index, canvas: canvas, height: height, width: width)
+                guard let frame = loadFrame(at: index, canvas: canvas, height: height, width: width) else { continue }
                 animatedFrames.append(AnimatedFrame(image: frame, duration: frameDuration))
 
-                if index == 0, let firstFrame = frame {
+                if index == 0 {
                     DispatchQueue.main.async {
-                        self.firstFrameCompletion?(firstFrame)
+                        self.firstFrameCompletion?(frame)
                     }
                 }
             }
