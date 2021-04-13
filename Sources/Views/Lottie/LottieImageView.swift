@@ -260,7 +260,6 @@ open class LottieImageView: UIImageView {
 
     private func setupAnimator(with imageSource: OpaquePointer, data: Data) {
         let animator = Animator(imageSource: imageSource,
-                                imageData: data,
                                 contentMode: self.contentMode,
                                 repeatCount: self.repeatCount,
                                 renderingQueue: self.renderingQueue) { [weak self] (firstFrame) in
