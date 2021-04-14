@@ -31,31 +31,18 @@ import ImageIO
 import librlottie
 import CoreGraphics
 
+/// The delegate of `LottieImageView.Animator` events.
+protocol LottieAnimatorDelegate: AnyObject {
+    func animator(_ animator: LottieImageView.Animator, didPlayAnimationLoops count: UInt)
+    func animator(_ animator: LottieImageView.Animator, didDecodeFirstFrame image: UIImage)
+}
+
 extension LottieImageView {
 
     // MARK: - Animator
 
     /// An animator which used to drive the data behind `LottieImageView`.
     public class Animator {
-
-        /// The animation object that can build the contents of the Lottie resource.
-        private let imageSource: OpaquePointer
-        private let maxRepeatCount: RepeatCount
-
-        private let maxTimeStep: TimeInterval = 1.0
-        private let animatedFrames = SafeArray<AnimatedFrame>()
-        private var frameCount = 0
-        private var timeSinceLastFrameChange: TimeInterval = 0.0
-        private var currentRepeatCount: UInt = 0
-
-        private var firstFrameCompletion: ((UIImage) -> Void)?
-
-        var isFinished: Bool = false
-
-        weak var delegate: LottieAnimatorDelegate?
-
-        // Total duration of one animation loop
-        var loopDuration: TimeInterval = 0
 
         /// The image of the current frame.
         public var currentFrameImage: UIImage? {
@@ -75,6 +62,11 @@ extension LottieImageView {
         /// The index of the current animation frame.
         public internal(set) var currentFrameIndex = 0
 
+        /// Whether the current frame is the last frame or not in the animation sequence.
+        public var isLastFrame: Bool {
+            return currentFrameIndex == frameCount - 1
+        }
+
         var isReachMaxRepeatCount: Bool {
             switch maxRepeatCount {
             case .once:
@@ -86,12 +78,21 @@ extension LottieImageView {
             }
         }
 
-        /// Whether the current frame is the last frame or not in the animation sequence.
-        public var isLastFrame: Bool {
-            return currentFrameIndex == frameCount - 1
-        }
+        weak var delegate: LottieAnimatorDelegate?
 
+        // Total duration of one animation loop
+        var loopDuration: TimeInterval = 0
+        var isFinished: Bool = false
         var contentMode = UIView.ContentMode.scaleToFill
+
+        /// The animation object that can build the contents of the Lottie resource.
+        private let imageSource: OpaquePointer
+        private let maxRepeatCount: RepeatCount
+        private let maxTimeStep: TimeInterval = 1.0
+        private let animatedFrames = SafeArray<AnimatedFrame>()
+        private var frameCount = 0
+        private var timeSinceLastFrameChange: TimeInterval = 0.0
+        private var currentRepeatCount: UInt = 0
 
         private lazy var renderingQueue: DispatchQueue = {
             return DispatchQueue(label: "com.onevcat.Kingfisher.Animator.renderingQueue")
@@ -108,13 +109,11 @@ extension LottieImageView {
         init(imageSource: OpaquePointer,
              contentMode mode: UIView.ContentMode,
              repeatCount: RepeatCount,
-             renderingQueue: DispatchQueue,
-             firstFrameCompletion: ((UIImage) -> Void)? = nil) {
+             renderingQueue: DispatchQueue) {
             self.imageSource = imageSource
             self.contentMode = mode
             self.maxRepeatCount = repeatCount
             self.renderingQueue = renderingQueue
-            self.firstFrameCompletion = firstFrameCompletion
         }
 
         /// Gets the image frame of a given index.
@@ -172,7 +171,7 @@ extension LottieImageView {
 
                 if index == 0 {
                     DispatchQueue.main.async {
-                        self.firstFrameCompletion?(frame)
+                        self.delegate?.animator(self, didDecodeFirstFrame: frame)
                     }
                 }
             }

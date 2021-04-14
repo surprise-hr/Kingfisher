@@ -1,35 +1,28 @@
 //
-//  AnimatableImageView.swift
+//  LottieImageView.swift
 //  Kingfisher
 //
-//  Created by bl4ckra1sond3tre on 4/22/16.
+//  Created by sergiikostanian on 08.04.2021.
 //
-//  The AnimatableImageView, AnimatedFrame and Animator is a modified version of
-//  some classes from kaishin's Gifu project (https://github.com/kaishin/Gifu)
+//  Copyright (c) 2021 Wei Wang <onevcat@gmail.com>
 //
-//  The MIT License (MIT)
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
 //
-//  Copyright (c) 2019 Reda Lemeden.
-//
-//  Permission is hereby granted, free of charge, to any person obtaining a copy of
-//  this software and associated documentation files (the "Software"), to deal in
-//  the Software without restriction, including without limitation the rights to
-//  use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-//  the Software, and to permit persons to whom the Software is furnished to do so,
-//  subject to the following conditions:
-//
-//  The above copyright notice and this permission notice shall be included in all
-//  copies or substantial portions of the Software.
+//  The above copyright notice and this permission notice shall be included in
+//  all copies or substantial portions of the Software.
 //
 //  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-//  FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-//  COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-//  IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-//  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-//
-//  The name and characters used in the demo of this software are property of their
-//  respective owners.
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+//  THE SOFTWARE.
 
 #if !os(watchOS)
 #if canImport(UIKit)
@@ -37,38 +30,11 @@ import UIKit
 import ImageIO
 import librlottie
 
-/// Protocol of `LottieImageView`.
-public protocol LottieImageViewDelegate: AnyObject {
-
-    /// Called after the animatedImageView has finished each animation loop.
-    ///
-    /// - Parameters:
-    ///   - imageView: The `LottieImageView` that is being animated.
-    ///   - count: The looped count.
-    func animatedImageView(_ imageView: LottieImageView, didPlayAnimationLoops count: UInt)
-
-    /// Called after the `LottieImageView` has reached the max repeat count.
-    ///
-    /// - Parameter imageView: The `LottieImageView` that is being animated.
-    func animatedImageViewDidFinishAnimating(_ imageView: LottieImageView)
-}
-
-extension LottieImageViewDelegate {
-    public func animatedImageView(_ imageView: LottieImageView, didPlayAnimationLoops count: UInt) {}
-    public func animatedImageViewDidFinishAnimating(_ imageView: LottieImageView) {}
-}
-
-/// Represents a subclass of `UIImageView` for displaying animated image.
-/// Different from showing animated image in a normal `UIImageView` (which load all frames at one time),
-/// `LottieImageView` only tries to load several frames (defined by `framePreloadCount`) to reduce memory usage.
-/// It provides a tradeoff between memory usage and CPU time. If you have a memory issue when using a normal image
-/// view to load GIF data, you could give this class a try.
-///
-/// Kingfisher supports setting GIF animated data to either `UIImageView` and `LottieImageView` out of box. So
-/// it would be fairly easy to switch between them.
+/// Represents a subclass of `UIImageView` for decoding bodymovin JSON animation using
+/// rLottie engine and playing it frame by frame.
 open class LottieImageView: UIImageView {
 
-    /// Proxy object for preventing a reference cycle between the `CADDisplayLink` and `LottieImageView`.
+    /// Proxy object for preventing a reference cycle between the `CADisplayLink` and `LottieImageView`.
     class TargetProxy {
         private weak var target: LottieImageView?
 
@@ -81,7 +47,7 @@ open class LottieImageView: UIImageView {
         }
     }
 
-    /// Enumeration that specifies repeat count of GIF
+    /// Enumeration that specifies animation repeat count.
     public enum RepeatCount: Equatable {
         case once
         case finite(count: UInt)
@@ -108,7 +74,7 @@ open class LottieImageView: UIImageView {
     // MARK: - Public property
     /// Whether automatically play the animation when the view become visible. Default is `true`.
     public var autoPlayAnimatedImage = true
-
+    /// Whether set first frame as a placeholder as soon as we got it decoded. Default is `true`.
     public var useFirstFrameAsPlaceholder = true
 
     /// The animation timer's run loop mode. Default is `RunLoop.Mode.common`.
@@ -137,6 +103,8 @@ open class LottieImageView: UIImageView {
         }
     }
 
+    /// The data of the lottie animation. Decoding and preparing animation frames
+    /// will start immidiately after setting this parameter.
     public var lottieImageData: Data? {
         didSet {
             if lottieImageData != oldValue {
@@ -239,15 +207,14 @@ open class LottieImageView: UIImageView {
     // Reset the animator.
     private func reset() {
         animator = nil
-        if let imageData = lottieImageData {
-            renderingQueue.async {
-                let imageSource = self.prepareImageSource(from: imageData)
-                DispatchQueue.main.async {
-                    self.setupAnimator(with: imageSource, data: imageData)
-                }
+        defer { didMove() }
+        guard let imageData = lottieImageData else { return }
+        renderingQueue.async {
+            let imageSource = self.prepareImageSource(from: imageData)
+            DispatchQueue.main.async {
+                self.setupAnimator(with: imageSource, data: imageData)
             }
         }
-        didMove()
     }
 
     private func prepareImageSource(from imageData: Data) -> OpaquePointer {
@@ -262,18 +229,14 @@ open class LottieImageView: UIImageView {
         let animator = Animator(imageSource: imageSource,
                                 contentMode: self.contentMode,
                                 repeatCount: self.repeatCount,
-                                renderingQueue: self.renderingQueue) { [weak self] (firstFrame) in
-            guard let self = self else { return }
-            if self.useFirstFrameAsPlaceholder {
-                self.image = firstFrame
-            }
-        }
+                                renderingQueue: self.renderingQueue)
         animator.delegate = self
         animator.prepareFramesAsynchronously()
         self.animator = animator
 
         if isWaitingAnimationToStart {
             startAnimating()
+            isWaitingAnimationToStart = false
         }
     }
 
@@ -322,14 +285,17 @@ open class LottieImageView: UIImageView {
     }
 }
 
-protocol LottieAnimatorDelegate: AnyObject {
-    func animator(_ animator: LottieImageView.Animator, didPlayAnimationLoops count: UInt)
-}
-
 extension LottieImageView: LottieAnimatorDelegate {
+
     func animator(_ animator: Animator, didPlayAnimationLoops count: UInt) {
         delegate?.animatedImageView(self, didPlayAnimationLoops: count)
     }
+
+    func animator(_ animator: LottieImageView.Animator, didDecodeFirstFrame image: UIImage) {
+        guard useFirstFrameAsPlaceholder else { return }
+        self.image = image
+    }
 }
+
 #endif
 #endif
