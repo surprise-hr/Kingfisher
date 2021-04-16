@@ -118,10 +118,6 @@ open class LottieImageView: UIImageView {
     // A flag to avoid invalidating the displayLink on deinit if it was never created, because displayLink is so lazy.
     private var isDisplayLinkInitialized: Bool = false
 
-    // Since we setting up the animator asynchronously and we allow to start animation right after setting image data
-    // we have to save that attempt (if there is one) and start animation once the animator is ready.
-    private var isWaitingAnimationToStart = false
-
     // A display link that keeps calling the `updateFrame` method on every screen refresh.
     private lazy var displayLink: CADisplayLink = {
         isDisplayLinkInitialized = true
@@ -177,10 +173,7 @@ open class LottieImageView: UIImageView {
     /// Starts the animation.
     override open func startAnimating() {
         guard !isAnimating else { return }
-        guard let animator = animator else {
-            isWaitingAnimationToStart = true
-            return
-        }
+        guard let animator = animator else { return }
         guard !animator.isReachMaxRepeatCount else { return }
 
         displayLink.isPaused = false
@@ -189,7 +182,6 @@ open class LottieImageView: UIImageView {
     /// Stops the animation.
     override open func stopAnimating() {
         super.stopAnimating()
-        isWaitingAnimationToStart = false
         if isDisplayLinkInitialized {
             displayLink.isPaused = true
         }
@@ -221,38 +213,18 @@ open class LottieImageView: UIImageView {
     // Reset the animator.
     private func reset() {
         animator = nil
-        defer { didMove() }
-        guard let imageData = lottieImageData else { return }
-        renderingQueue.async {
-            let imageSource = self.prepareImageSource(from: imageData)
-            DispatchQueue.main.async {
-                self.setupAnimator(with: imageSource, data: imageData)
-            }
+        if let imageData = lottieImageData {
+            setupAnimator(with: imageData)
         }
+        didMove()
     }
 
-    private func prepareImageSource(from imageData: Data) -> OpaquePointer {
-        let resourcePath = Bundle.main.resourcePath
-        let jsonString = String(data: imageData, encoding: .utf8)
-        let jsonDataBuffer = jsonString?.cString(using: .utf8)
-        let resourcePathBuffer = resourcePath?.cString(using: .utf8)
-        return lottie_animation_from_data(jsonDataBuffer, "", resourcePathBuffer)
-    }
-
-    private func setupAnimator(with imageSource: OpaquePointer, data: Data) {
-        let animator = Animator(imageSource: imageSource,
-                                contentMode: self.contentMode,
-                                frameSize: frameSize,
-                                repeatCount: self.repeatCount,
-                                renderingQueue: self.renderingQueue)
+    private func setupAnimator(with imageData: Data) {
+        let animator = Animator(repeatCount: repeatCount,
+                                renderingQueue: renderingQueue)
         animator.delegate = self
-        animator.prepareFramesAsynchronously()
+        animator.prepareFramesAsynchronously(with: imageData, frameSize: frameSize)
         self.animator = animator
-
-        if isWaitingAnimationToStart {
-            startAnimating()
-            isWaitingAnimationToStart = false
-        }
     }
 
     private func didMove() {
@@ -309,6 +281,10 @@ extension LottieImageView: LottieAnimatorDelegate {
     func animator(_ animator: LottieImageView.Animator, didDecodeFirstFrame image: UIImage) {
         guard useFirstFrameAsPlaceholder else { return }
         self.image = image
+    }
+
+    func animatorDidFinishDecoding(_ animator: Animator) {
+        delegate?.animatedImageViewDidPreparedAnimation(self)
     }
 }
 

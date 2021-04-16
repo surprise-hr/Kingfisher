@@ -45,11 +45,17 @@ public protocol LottieImageViewDelegate: AnyObject {
     ///
     /// - Parameter imageView: The `LottieImageView` that is being animated.
     func animatedImageViewDidFinishAnimating(_ imageView: LottieImageView)
+
+    /// Called after the `LottieImageView` has prepared animation frames.
+    ///
+    /// - Parameter imageView: The `LottieImageView` that is being animated.
+    func animatedImageViewDidPreparedAnimation(_ imageView: LottieImageView)
 }
 
-extension LottieImageViewDelegate {
-    public func animatedImageView(_ imageView: LottieImageView, didPlayAnimationLoops count: UInt) {}
-    public func animatedImageViewDidFinishAnimating(_ imageView: LottieImageView) {}
+public extension LottieImageViewDelegate {
+    func animatedImageView(_ imageView: LottieImageView, didPlayAnimationLoops count: UInt) {}
+    func animatedImageViewDidFinishAnimating(_ imageView: LottieImageView) {}
+    func animatedImageViewDidPreparedAnimation(_ imageView: LottieImageView) {}
 }
 
 #endif

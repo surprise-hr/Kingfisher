@@ -35,6 +35,7 @@ import CoreGraphics
 protocol LottieAnimatorDelegate: AnyObject {
     func animator(_ animator: LottieImageView.Animator, didPlayAnimationLoops count: UInt)
     func animator(_ animator: LottieImageView.Animator, didDecodeFirstFrame image: UIImage)
+    func animatorDidFinishDecoding(_ animator: LottieImageView.Animator)
 }
 
 extension LottieImageView {
@@ -83,14 +84,12 @@ extension LottieImageView {
         // Total duration of one animation loop
         var loopDuration: TimeInterval = 0
         var isFinished: Bool = false
-        var contentMode = UIView.ContentMode.scaleToFill
 
         /// The animation object that can build the contents of the Lottie resource.
-        private let imageSource: OpaquePointer
-        private let frameSize: CGSize?
         private let maxRepeatCount: RepeatCount
         private let maxTimeStep: TimeInterval = 1.0
         private let animatedFrames = SafeArray<AnimatedFrame>()
+        private var frameSize: CGSize?
         private var frameCount = 0
         private var timeSinceLastFrameChange: TimeInterval = 0.0
         private var currentRepeatCount: UInt = 0
@@ -102,19 +101,10 @@ extension LottieImageView {
         /// Creates an animator with image source reference.
         ///
         /// - Parameters:
-        ///   - data: The animation object that can build the contents of the Lottie resource.
-        ///   - mode: Content mode of the `LottieImageView`.
-        ///   - size: Size of the `LottieImageView`.
-        ///   - count: Count of frames needed to be preloaded.
         ///   - repeatCount: The repeat count should this animator uses.
-        init(imageSource: OpaquePointer,
-             contentMode mode: UIView.ContentMode,
-             frameSize: CGSize?,
-             repeatCount: RepeatCount,
+        ///   - renderingQueue: A queue that will be used for rendering operations.
+        init(repeatCount: RepeatCount,
              renderingQueue: DispatchQueue) {
-            self.imageSource = imageSource
-            self.contentMode = mode
-            self.frameSize = frameSize
             self.maxRepeatCount = repeatCount
             self.renderingQueue = renderingQueue
         }
@@ -127,14 +117,17 @@ extension LottieImageView {
         }
 
         public func duration(at index: Int) -> TimeInterval {
-            return animatedFrames[index]?.duration  ?? .infinity
+            return animatedFrames[index]?.duration ?? .infinity
         }
 
-        func prepareFramesAsynchronously() {
-            frameCount = lottie_animation_get_totalframe(imageSource)
-            animatedFrames.reserveCapacity(frameCount)
-            renderingQueue.async { [weak self] in
-                self?.setupAnimatedFrames()
+        func prepareFramesAsynchronously(with imageData: Data, frameSize: CGSize?) {
+            renderingQueue.async {
+                self.frameSize = frameSize
+                let imageSource = self.prepareImageSource(from: imageData)
+                self.frameCount = lottie_animation_get_totalframe(imageSource)
+                self.loopDuration = lottie_animation_get_duration(imageSource)
+                self.animatedFrames.reserveCapacity(self.frameCount)
+                self.setupAnimatedFrames(with: imageSource)
             }
         }
 
@@ -150,10 +143,17 @@ extension LottieImageView {
             }
         }
 
-        private func setupAnimatedFrames() {
+        private func prepareImageSource(from imageData: Data) -> OpaquePointer {
+            let resourcePath = Bundle.main.resourcePath
+            let jsonString = String(data: imageData, encoding: .utf8)
+            let jsonDataBuffer = jsonString?.cString(using: .utf8)
+            let resourcePathBuffer = resourcePath?.cString(using: .utf8)
+            return lottie_animation_from_data(jsonDataBuffer, "", resourcePathBuffer)
+        }
+
+        private func setupAnimatedFrames(with imageSource: OpaquePointer) {
             resetAnimatedFrames()
 
-            let duration: TimeInterval = lottie_animation_get_duration(imageSource)
             let frameDuration: TimeInterval = 1 / lottie_animation_get_framerate(imageSource)
 
             // Lottie surface use ARGB8888 Premultiplied
@@ -174,7 +174,7 @@ extension LottieImageView {
             }
 
             for index in 0..<frameCount {
-                guard let frame = loadFrame(at: index, canvas: canvas, height: height, width: width) else { continue }
+                guard let frame = loadFrame(at: index, imageSource: imageSource, canvas: canvas, height: height, width: width) else { continue }
                 animatedFrames.append(AnimatedFrame(image: frame, duration: frameDuration))
 
                 if index == 0 {
@@ -187,14 +187,16 @@ extension LottieImageView {
             // Remove image source from memory when finished decoding.
             lottie_animation_destroy(imageSource)
 
-            self.loopDuration = duration
+            DispatchQueue.main.async {
+                self.delegate?.animatorDidFinishDecoding(self)
+            }
         }
 
         private func resetAnimatedFrames() {
             animatedFrames.removeAll()
         }
 
-        private func loadFrame(at index: Int, canvas: CGContext, height: Int, width: Int) -> UIImage? {
+        private func loadFrame(at index: Int, imageSource: OpaquePointer, canvas: CGContext, height: Int, width: Int) -> UIImage? {
             let buffer = UnsafeMutablePointer<UInt32>(OpaquePointer(canvas.data))
             lottie_animation_render(imageSource, index, buffer, width, height, canvas.bytesPerRow)
 
