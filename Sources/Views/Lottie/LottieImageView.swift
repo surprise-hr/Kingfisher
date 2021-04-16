@@ -103,18 +103,6 @@ open class LottieImageView: UIImageView {
         }
     }
 
-    /// The data of the lottie animation. Decoding and preparing animation frames
-    /// will start immidiately after setting this parameter.
-    public var lottieImageData: Data? {
-        didSet {
-            if lottieImageData != oldValue {
-                reset()
-            }
-            setNeedsDisplay()
-            layer.setNeedsDisplay()
-        }
-    }
-
     /// Delegate of this `LottieImageView` object. See `LottieImageViewDelegate` protocol for more.
     public weak var delegate: LottieImageViewDelegate?
 
@@ -143,6 +131,32 @@ open class LottieImageView: UIImageView {
         displayLink.isPaused = true
         return displayLink
     }()
+
+    // Preferred resulting animation frame size.
+    private var frameSize: CGSize?
+
+    // The data of the lottie animation.
+    private var lottieImageData: Data? {
+        didSet {
+            if lottieImageData != oldValue {
+                reset()
+            }
+            setNeedsDisplay()
+            layer.setNeedsDisplay()
+        }
+    }
+
+    // MARK: - Public methods
+
+    /// Sets the data of the lottie animation. Decoding and preparing animation frames will start immidiately.
+    ///
+    /// - Parameters:
+    ///   - imageData: A lottie JSON animated image data.
+    ///   - frameSize: The resulting animation frames size. If `nil` is specified default size will be used.
+    public func setImageData(_ imageData: Data?, frameSize: CGSize? = nil) {
+        self.frameSize = frameSize
+        self.lottieImageData = imageData
+    }
 
     // MARK: - Override
 
@@ -228,6 +242,7 @@ open class LottieImageView: UIImageView {
     private func setupAnimator(with imageSource: OpaquePointer, data: Data) {
         let animator = Animator(imageSource: imageSource,
                                 contentMode: self.contentMode,
+                                frameSize: frameSize,
                                 repeatCount: self.repeatCount,
                                 renderingQueue: self.renderingQueue)
         animator.delegate = self

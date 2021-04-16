@@ -87,6 +87,7 @@ extension LottieImageView {
 
         /// The animation object that can build the contents of the Lottie resource.
         private let imageSource: OpaquePointer
+        private let frameSize: CGSize?
         private let maxRepeatCount: RepeatCount
         private let maxTimeStep: TimeInterval = 1.0
         private let animatedFrames = SafeArray<AnimatedFrame>()
@@ -108,10 +109,12 @@ extension LottieImageView {
         ///   - repeatCount: The repeat count should this animator uses.
         init(imageSource: OpaquePointer,
              contentMode mode: UIView.ContentMode,
+             frameSize: CGSize?,
              repeatCount: RepeatCount,
              renderingQueue: DispatchQueue) {
             self.imageSource = imageSource
             self.contentMode = mode
+            self.frameSize = frameSize
             self.maxRepeatCount = repeatCount
             self.renderingQueue = renderingQueue
         }
@@ -159,7 +162,12 @@ extension LottieImageView {
 
             var width: size_t = 0
             var height: size_t = 0
-            lottie_animation_get_size(imageSource, &width, &height)
+            if let frameSize = frameSize {
+                width = Int(ceil(frameSize.width))
+                height = Int(ceil(frameSize.height))
+            } else {
+                lottie_animation_get_size(imageSource, &width, &height)
+            }
 
             guard let canvas = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: colorSpace, bitmapInfo: bitmapInfo.rawValue) else {
                 return
