@@ -63,6 +63,8 @@ extension LottieImageView {
         /// The index of the current animation frame.
         public internal(set) var currentFrameIndex = 0
 
+        public private(set) var isPreparedFrames = false
+
         /// Whether the current frame is the last frame or not in the animation sequence.
         public var isLastFrame: Bool {
             return currentFrameIndex == frameCount - 1
@@ -85,12 +87,13 @@ extension LottieImageView {
         var loopDuration: TimeInterval = 0
         var isFinished: Bool = false
 
+        private(set) var frameCount = 0
+
         /// The animation object that can build the contents of the Lottie resource.
         private let maxRepeatCount: RepeatCount
         private let maxTimeStep: TimeInterval = 1.0
         private let animatedFrames = SafeArray<AnimatedFrame>()
         private var frameSize: CGSize?
-        private var frameCount = 0
         private var timeSinceLastFrameChange: TimeInterval = 0.0
         private var currentRepeatCount: UInt = 0
 
@@ -188,6 +191,7 @@ extension LottieImageView {
             lottie_animation_destroy(imageSource)
 
             DispatchQueue.main.async {
+                self.isPreparedFrames = true
                 self.delegate?.animatorDidFinishDecoding(self)
             }
         }

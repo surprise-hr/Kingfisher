@@ -154,6 +154,18 @@ open class LottieImageView: UIImageView {
         self.lottieImageData = imageData
     }
 
+    /// Sets the current playback to the specified position.
+    ///
+    /// - Parameter position: The normalized position which has to be set. Takes values in range `0...1`.
+    public func seek(to position: Float) {
+        guard (0.0...1.0).contains(position) else { return }
+        guard let animator = animator, animator.isPreparedFrames else { return }
+        let index = Int(Float(animator.frameCount) * position)
+        guard let currentFrame = animator.frame(at: index) else { return }
+        animator.currentFrameIndex = index
+        layer.contents = currentFrame.cgImage
+    }
+
     // MARK: - Override
 
     deinit {
