@@ -76,6 +76,11 @@ open class LottieImageView: UIImageView {
     public var autoPlayAnimatedImage = true
     /// Whether set first frame as a placeholder as soon as we got it decoded. Default is `true`.
     public var useFirstFrameAsPlaceholder = true
+    /// The count of the frames should be preloaded.
+    public var preloadTreshold: Int = 10
+    /// For an animated image, whether or not all frames should be loaded before displaying.
+    public var preloadAll: Bool = false
+    public var onlyFirstFrame: Bool = false
 
     /// The animation timer's run loop mode. Default is `RunLoop.Mode.common`.
     /// Set this property to `RunLoop.Mode.default` will make the animation pause during UIScrollView scrolling.
@@ -224,6 +229,7 @@ open class LottieImageView: UIImageView {
 
     // Reset the animator.
     private func reset() {
+        animator?.releaseImageSource()
         animator = nil
         if let imageData = lottieImageData {
             setupAnimator(with: imageData)
@@ -235,6 +241,9 @@ open class LottieImageView: UIImageView {
         let animator = Animator(repeatCount: repeatCount,
                                 renderingQueue: renderingQueue)
         animator.delegate = self
+        animator.preloadTreshold = preloadTreshold
+        animator.preloadAll = preloadAll
+        animator.onlyFirstFrame = onlyFirstFrame
         animator.prepareFramesAsynchronously(with: imageData, frameSize: frameSize)
         self.animator = animator
     }
