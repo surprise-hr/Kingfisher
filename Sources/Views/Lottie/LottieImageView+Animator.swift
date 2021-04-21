@@ -276,7 +276,6 @@ extension LottieImageView {
         
         private func loadFrame(at index: Int, imageSource: OpaquePointer, canvas: CGContext, height: Int, width: Int) -> UIImage? {
             let buffer = UnsafeMutablePointer<UInt32>(OpaquePointer(canvas.data))
-            print(imageSource)
             lottie_animation_render(imageSource, index, buffer, width, height, canvas.bytesPerRow)
             
             guard let cgImage = canvas.makeImage() else {
