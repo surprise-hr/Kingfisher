@@ -239,7 +239,27 @@ open class AnimatedImageView: UIImageView {
 
     // This is for back compatibility that using regular `UIImageView` to show animated image.
     override func shouldPreloadAllAnimation() -> Bool {
-        return false
+        false
+    }
+    
+    public func load(sequence: [UIImage], duration: TimeInterval) {
+        animator = nil
+        
+        if !sequence.isEmpty {
+            let targetSize = bounds.scaled(UIScreen.main.scale).size
+            let animator = Animator(animationFrames: sequence,
+                                    contentMode: contentMode,
+                                    size: targetSize,
+                                    repeatCount: repeatCount,
+                                    duration: duration)
+            animator.delegate = self
+            animator.needsPrescaling = needsPrescaling
+            animator.backgroundDecode = backgroundDecode
+            animator.prepareFramesAsynchronously()
+            self.animator = animator
+        }
+        
+        didMove()
     }
 
     // Reset the animator.
@@ -361,7 +381,7 @@ extension AnimatedImageView {
         /// The maximum count of image frames that needs preload.
         public let maxFrameCount: Int
 
-        private let imageSource: CGImageSource
+        private let imageSource: CGImageSource?
         private let maxRepeatCount: RepeatCount
 
         private let maxTimeStep: TimeInterval = 1.0
@@ -453,6 +473,21 @@ extension AnimatedImageView {
             self.maxRepeatCount = repeatCount
             self.preloadQueue = preloadQueue
         }
+        
+        init(animationFrames: [UIImage],
+             contentMode mode: UIView.ContentMode,
+             size: CGSize,
+             repeatCount: RepeatCount,
+             duration: TimeInterval) {
+            loopDuration = duration
+            self.contentMode = mode
+            self.size = size
+            self.maxFrameCount = animationFrames.count
+            self.frameCount = animationFrames.count
+            self.maxRepeatCount = repeatCount
+            self.imageSource = nil
+            animationFrames.forEach({ animatedFrames.append(.init(image: $0, duration: duration / Double(frameCount))) })
+        }
 
         /// Gets the image frame of a given index.
         /// - Parameter index: The index of desired image.
@@ -466,6 +501,7 @@ extension AnimatedImageView {
         }
 
         func prepareFramesAsynchronously() {
+            guard let imageSource = imageSource else { return }
             frameCount = Int(CGImageSourceGetCount(imageSource))
             animatedFrames.reserveCapacity(frameCount)
             preloadQueue.async { [weak self] in
@@ -486,6 +522,7 @@ extension AnimatedImageView {
         }
 
         private func setupAnimatedFrames() {
+            guard let imageSource = imageSource else { return }
             resetAnimatedFrames()
 
             var duration: TimeInterval = 0
@@ -507,6 +544,7 @@ extension AnimatedImageView {
         }
 
         private func loadFrame(at index: Int) -> UIImage? {
+            guard let imageSource = imageSource else { return nil }
             let options: [CFString: Any] = [
                 kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
                 kCGImageSourceCreateThumbnailWithTransform: true,
