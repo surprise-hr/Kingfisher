@@ -285,7 +285,7 @@ open class AnimatedImageView: UIImageView {
     
     private func didMove() {
         if autoPlayAnimatedImage && animator != nil {
-            if let _ = superview, let _ = window {
+            if let _ = superview, let _ = window, !isHidden {
                 startAnimating()
             } else {
                 stopAnimating()
