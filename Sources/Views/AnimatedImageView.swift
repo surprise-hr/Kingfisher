@@ -218,7 +218,19 @@ open class AnimatedImageView: UIImageView {
             displayLink.isPaused = true
         }
     }
-    
+
+    /// Sets the current playback to the specified position.
+    ///
+    /// - Parameter position: The normalized position which has to be set. Takes values in range `0...1`.
+    public func seek(to position: Float) {
+        guard (0.0...1.0).contains(position) else { return }
+        guard let animator = animator else { return }
+        let index = Int(Float(animator.frameCount) * position)
+        guard let currentFrame = animator.frame(at: index) else { return }
+        animator.currentFrameIndex = index
+        layer.contents = currentFrame.cgImage
+    }
+
     override open func display(_ layer: CALayer) {
         if let currentFrame = animator?.currentFrameImage {
             layer.contents = currentFrame.cgImage
@@ -386,7 +398,7 @@ extension AnimatedImageView {
 
         private let maxTimeStep: TimeInterval = 1.0
         private let animatedFrames = SafeArray<AnimatedFrame>()
-        private var frameCount = 0
+        private(set) var frameCount = 0
         private var timeSinceLastFrameChange: TimeInterval = 0.0
         private var currentRepeatCount: UInt = 0
 

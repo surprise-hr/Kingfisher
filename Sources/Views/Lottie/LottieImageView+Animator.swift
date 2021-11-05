@@ -135,9 +135,7 @@ extension LottieImageView {
         }
         
         deinit {
-            if let imageSource = imageSource {
-                lottie_animation_destroy(imageSource)
-            }
+            releaseImageSource()
         }
         
         /// Gets the image frame of a given index.
@@ -178,11 +176,9 @@ extension LottieImageView {
         }
         
         func releaseImageSource() {
-            renderingQueue.async { [weak self] in
-                guard let imageSource = self?.imageSource else { return }
-                lottie_animation_destroy(imageSource)
-                self?.imageSource = nil
-            }
+            guard let imageSource = self.imageSource else { return }
+            lottie_animation_destroy(imageSource)
+            self.imageSource = nil
         }
         
         private func prepareImageSource(from imageData: Data) -> OpaquePointer {
