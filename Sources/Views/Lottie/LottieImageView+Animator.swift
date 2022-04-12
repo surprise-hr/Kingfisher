@@ -28,7 +28,7 @@
 #if canImport(UIKit)
 import UIKit
 import ImageIO
-import librlottie
+import Lottie
 import CoreGraphics
 
 /// The delegate of `LottieImageView.Animator` events.

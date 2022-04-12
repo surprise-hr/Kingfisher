@@ -7,9 +7,13 @@ let package = Package(
     products: [
         .library(name: "Kingfisher", targets: ["Kingfisher"])
     ],
+	dependencies: [
+		.package(url: "https://github.com/airbnb/lottie-ios.git", from: "3.3.0")
+	],
     targets: [
         .target(
             name: "Kingfisher",
+			dependencies: ["Lottie"],
             path: "Sources"
         )
     ]
