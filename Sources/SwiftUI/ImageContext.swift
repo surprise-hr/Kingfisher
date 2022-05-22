@@ -36,30 +36,30 @@ extension KFImage {
             KingfisherManager.shared.defaultOptions + [.loadDiskFileSynchronously]
         )
 
-        var configurations: [(HoldingView) -> HoldingView] = []
-        var renderConfigurations: [(HoldingView.RenderingView) -> Void] = []
-        
-        var cancelOnDisappear: Bool = false
-        var placeholder: ((Progress) -> AnyView)? = nil
+		var configurations: [(HoldingView) -> HoldingView] = []
+		var renderConfigurations: [(HoldingView.RenderingView) -> Void] = []
 
-        let onFailureDelegate = Delegate<KingfisherError, Void>()
-        let onSuccessDelegate = Delegate<RetrieveImageResult, Void>()
-        let onProgressDelegate = Delegate<(Int64, Int64), Void>()
-        
-        init(source: Source?) {
-            self.source = source
-        }
-        
-        func shouldApplyFade(cacheType: CacheType) -> Bool {
-            options.forceTransition || cacheType == .none
-        }
+		var cancelOnDisappear: Bool = false
+		var placeholder: ((Progress) -> AnyView)? = nil
 
-        func fadeTransitionDuration(cacheType: CacheType) -> TimeInterval? {
-            shouldApplyFade(cacheType: cacheType)
-            ? options.transition.fadeDuration
-                : nil
-        }
-    }
+		let onFailureDelegate = Delegate<KingfisherError, Void>()
+		let onSuccessDelegate = Delegate<RetrieveImageResult, Void>()
+		let onProgressDelegate = Delegate<(Int64, Int64), Void>()
+
+		init(source: Source?) {
+			self.source = source
+		}
+
+		func shouldApplyFade(cacheType: CacheType) -> Bool {
+			options.forceTransition || cacheType == .none
+		}
+
+		func fadeTransitionDuration(cacheType: CacheType) -> TimeInterval? {
+			shouldApplyFade(cacheType: cacheType)
+				? options.transition.fadeDuration
+				: nil
+		}
+	}
 }
 
 extension ImageTransition {
