@@ -8,12 +8,14 @@ let package = Package(
         .library(name: "Kingfisher", targets: ["Kingfisher"])
     ],
 	dependencies: [
-		.package(url: "https://github.com/airbnb/lottie-ios.git", from: "3.3.0")
+		.package(url: "https://github.com/SDWebImage/librlottie-Xcode", from: "0.2.1"),
 	],
     targets: [
         .target(
             name: "Kingfisher",
-			dependencies: ["Lottie"],
+			dependencies: [
+				.product(name: "librlottie", package: "librlottie-Xcode"),
+			],
             path: "Sources"
         )
     ]
