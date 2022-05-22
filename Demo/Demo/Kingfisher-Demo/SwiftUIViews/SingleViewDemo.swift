@@ -27,12 +27,12 @@
 import Kingfisher
 import SwiftUI
 
-@available(iOS 13.0, *)
+@available(iOS 14.0, *)
 struct SingleViewDemo : View {
 
     @State private var index = 1
-
     @State private var blackWhite = false
+    @State private var forceTransition = true
 
     var url: URL {
         URL(string: "https://raw.githubusercontent.com/onevcat/Kingfisher-TestImages/master/DemoAppImage/Loading/kingfisher-\(self.index).jpg")!
@@ -49,12 +49,11 @@ struct SingleViewDemo : View {
                 .onFailure { e in
                     print("err: \(e)")
                 }
-                .placeholder {
-                    Image(systemName: "arrow.2.circlepath.circle")
-                        .font(.largeTitle)
+                .placeholder { progress in
+                    ProgressView(progress)
                 }
-                .fade(duration: 1)
-                .forceTransition()
+                .fade(duration: index == 1 ? 0 : 1) // Do not animate for the first image. Otherwise it causes an unwanted animation when the page is shown.
+                .forceTransition(forceTransition)
                 .resizable()
                 .frame(width: 300, height: 300)
                 .cornerRadius(20)
@@ -67,12 +66,14 @@ struct SingleViewDemo : View {
             Button(action: {
                 self.blackWhite.toggle()
             }) { Text("Black & White") }
+            Toggle("Force Transition?", isOn: $forceTransition)
+                .frame(width: 300)
 
         }.navigationBarTitle(Text("Basic Image"), displayMode: .inline)
     }
 }
 
-@available(iOS 13.0, *)
+@available(iOS 14.0, *)
 struct SingleViewDemo_Previews : PreviewProvider {
     static var previews: some View {
         SingleViewDemo()

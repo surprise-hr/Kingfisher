@@ -2,7 +2,7 @@
 //  MainView.swift
 //  Kingfisher
 //
-//  Created by jp20028 on 2019/08/07.
+//  Created by onevcat on 2019/08/07.
 //
 //  Copyright (c) 2019 Wei Wang <onevcat@gmail.com>
 //
@@ -27,7 +27,7 @@
 import SwiftUI
 import Kingfisher
 
-@available(iOS 13.0, *)
+@available(iOS 14.0, *)
 struct MainView: View {
     var body: some View {
         List {
@@ -43,15 +43,16 @@ struct MainView: View {
             NavigationLink(destination: SingleViewDemo()) { Text("Basic Image") }
             NavigationLink(destination: SizingAnimationDemo()) { Text("Sizing Toggle") }
             NavigationLink(destination: ListDemo()) { Text("List") }
-            if #available(iOS 14.0, *) {
-                NavigationLink(destination: LazyVStackDemo()) { Text("Stack") }
-                NavigationLink(destination: GridDemo()) { Text("Grid") }
-            }
+            NavigationLink(destination: LazyVStackDemo()) { Text("Stack") }
+            NavigationLink(destination: GridDemo()) { Text("Grid") }
+            NavigationLink(destination: AnimatedImageDemo()) { Text("Animated Image") }
+            NavigationLink(destination: GeometryReaderDemo()) { Text("Geometry Reader") }
+            NavigationLink(destination: TransitionViewDemo()) { Text("Transition") }
         }.navigationBarTitle(Text("SwiftUI Sample"))
     }
 }
 
-@available(iOS 13.0, *)
+@available(iOS 14.0, *)
 struct MainView_Previews: PreviewProvider {
     static var previews: some View {
         MainView()

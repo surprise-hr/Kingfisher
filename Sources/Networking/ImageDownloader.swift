@@ -143,7 +143,7 @@ open class ImageDownloader {
     
     /// A responder for authentication challenge. 
     /// Downloader will forward the received authentication challenge for the downloading session to this responder.
-    open weak var authenticationChallengeResponder: AuthenticationChallengeResponsable?
+    open weak var authenticationChallengeResponder: AuthenticationChallengeResponsible?
 
     private let name: String
     private var session: URLSession
@@ -194,10 +194,7 @@ open class ImageDownloader {
             }
         }
         sessionDelegate.onDidDownloadData.delegate(on: self) { (self, task) in
-            guard let url = task.originalURL else {
-                return task.mutableData
-            }
-            return (self.delegate ?? self).imageDownloader(self, didDownload: task.mutableData, for: url)
+            return (self.delegate ?? self).imageDownloader(self, didDownload: task.mutableData, with: task)
         }
     }
 
@@ -476,8 +473,8 @@ extension ImageDownloader {
     }
 }
 
-// Use the default implementation from extension of `AuthenticationChallengeResponsable`.
-extension ImageDownloader: AuthenticationChallengeResponsable {}
+// Use the default implementation from extension of `AuthenticationChallengeResponsible`.
+extension ImageDownloader: AuthenticationChallengeResponsible {}
 
 // Use the default implementation from extension of `ImageDownloaderDelegate`.
 extension ImageDownloader: ImageDownloaderDelegate {}

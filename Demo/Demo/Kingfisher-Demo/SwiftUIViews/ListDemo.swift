@@ -27,23 +27,19 @@
 import Kingfisher
 import SwiftUI
 
-@available(iOS 13.0, *)
+@available(iOS 14.0, *)
 struct ListDemo : View {
 
-    let index = 1 ..< 700
-
     var body: some View {
-        List(index) { i in
+        List(1 ..< 700) { i in
             ImageCell(index: i)
                 .frame(height: 300)
         }.navigationBarTitle(Text("SwiftUI List"), displayMode: .inline)
     }
 }
 
-@available(iOS 13.0, *)
+@available(iOS 14.0, *)
 struct ImageCell: View {
-
-    @State var done = false
 
     var alreadyCached: Bool {
         ImageCache.default.isCached(forKey: url.absoluteString)
@@ -57,7 +53,7 @@ struct ImageCell: View {
     var body: some View {
         HStack(alignment: .center) {
             Spacer()
-            KFImage.url(url, isLoaded: $done)
+            KFImage.url(url)
                 .resizable()
                 .onSuccess { r in
                     print("Success: \(self.index) - \(r.cacheType)")
@@ -89,7 +85,7 @@ struct ImageCell: View {
 
 }
 
-@available(iOS 13.0, *)
+@available(iOS 14.0, *)
 struct SwiftUIList_Previews : PreviewProvider {
     static var previews: some View {
         ListDemo()

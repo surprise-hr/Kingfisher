@@ -1,8 +1,8 @@
 //
-//  SizingAnimationDemo.swift
+//  AnimatedImageDemo.swift
 //  Kingfisher
 //
-//  Created by onevcat on 2021/03/02.
+//  Created by wangxingbin on 2021/4/27.
 //
 //  Copyright (c) 2021 Wei Wang <onevcat@gmail.com>
 //
@@ -28,42 +28,52 @@ import SwiftUI
 import Kingfisher
 
 @available(iOS 14.0, *)
-struct SizingAnimationDemo: View {
-    @State var imageSize: CGFloat = 250
-    @State var isPlaying = false
-
+struct AnimatedImageDemo: View {
+    
+    @State private var index = 1
+        
+    var url: URL {
+        ImageLoader.gifImageURLs[index - 1]
+    }
+    
     var body: some View {
         VStack {
-            KFImage(URL(string: "https://raw.githubusercontent.com/onevcat/Kingfisher-TestImages/master/DemoAppImage/Loading/kingfisher-1.jpg")!)
-                .resizable()
+            KFAnimatedImage(url)
+                .configure { view in
+                    view.framePreloadCount = 3
+                }
+                .cacheOriginalImage()
+                .onSuccess { r in
+                    print("suc: \(r)")
+                }
+                .onFailure { e in
+                    print("err: \(e)")
+                }
+                .placeholder { p in
+                    ProgressView(p)
+                }
+                .fade(duration: 1)
+                .forceTransition()
                 .aspectRatio(contentMode: .fill)
-                .frame(width: imageSize, height: imageSize)
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .frame(width: 350, height: 350)
-            Button(action: {
-                playButtonAction()
-            }) {
-                Image(systemName: self.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 60))
-            }
-        }
+                .frame(width: 300, height: 300)
+                .cornerRadius(20)
+                .shadow(radius: 5)
+                .frame(width: 320, height: 320)
 
+            Button(action: {
+                self.index = (self.index % 3) + 1
+            }) { Text("Next Image") }
+        }.navigationBarTitle(Text("Basic Image"), displayMode: .inline)
     }
-    func playButtonAction() {
-        withAnimation(Animation.spring(response: 0.45, dampingFraction: 0.475, blendDuration: 0)) {
-            if self.imageSize == 250 {
-                self.imageSize = 350
-            } else {
-                self.imageSize = 250
-            }
-            self.isPlaying.toggle()
-        }
-    }
+    
 }
 
 @available(iOS 14.0, *)
-struct SizingAnimationDemo_Previews: PreviewProvider {
+struct AnimatedImageDemo_Previews: PreviewProvider {
+    
     static var previews: some View {
-        SizingAnimationDemo()
+        AnimatedImageDemo()
     }
+    
 }
+
