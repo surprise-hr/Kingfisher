@@ -7,15 +7,11 @@ let package = Package(
     products: [
         .library(name: "Kingfisher", targets: ["Kingfisher"])
     ],
-	dependencies: [
-		.package(url: "https://github.com/SDWebImage/librlottie-Xcode", from: "0.2.0")
-	],
+	dependencies: [],
     targets: [
         .target(
             name: "Kingfisher",
-			dependencies: [
-				"librlottie"
-			],
+			dependencies: [	],
             path: "Sources"
         )
     ]
