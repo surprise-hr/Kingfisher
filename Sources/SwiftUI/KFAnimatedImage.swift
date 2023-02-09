@@ -67,8 +67,10 @@ public struct KFAnimatedImageViewRepresenter: UIViewRepresentable, KFImageHoldin
         switch self.context.options.contentMode {
         case .aspectFit:
             view.contentMode = .scaleAspectFit
+            view.clipsToBounds = false
         case .aspectFill:
             view.contentMode = .scaleAspectFill
+            view.clipsToBounds = true
         case .none:
             break
         }
