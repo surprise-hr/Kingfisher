@@ -25,7 +25,7 @@
 //  THE SOFTWARE.
 
 import XCTest
-import Kingfisher
+@testable import Kingfisher
 
 class ImageDataProviderTests: XCTestCase {
     
@@ -36,17 +36,109 @@ class ImageDataProviderTests: XCTestCase {
         try! testImageData.write(to: fileURL)
         
         let provider = LocalFileImageDataProvider(fileURL: fileURL)
-        XCTAssertEqual(provider.cacheKey, fileURL.absoluteString)
+        XCTAssertEqual(provider.cacheKey, fileURL.localFileCacheKey)
+        XCTAssertEqual(fileURL.cacheKey, fileURL.localFileCacheKey)
+        
         XCTAssertEqual(provider.fileURL, fileURL)
         
-        var syncCalled = false
+        let exp = expectation(description: #function)
         provider.data { result in
             XCTAssertEqual(result.value, testImageData)
-            syncCalled = true
+            try! fm.removeItem(at: fileURL)
+            exp.fulfill()
         }
+
+        waitForExpectations(timeout: 1, handler: nil)
+    }
+    
+    #if swift(>=5.5)
+    #if canImport(_Concurrency)
+    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    func testLocalFileImageDataProviderAsync() async {
+        let fm = FileManager.default
+        let document = try! fm.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        let fileURL = document.appendingPathComponent("test")
+        try! testImageData.write(to: fileURL)
         
-        XCTAssertTrue(syncCalled)
+        let provider = LocalFileImageDataProvider(fileURL: fileURL)
+        XCTAssertEqual(provider.cacheKey, fileURL.localFileCacheKey)
+        XCTAssertEqual(fileURL.cacheKey, fileURL.localFileCacheKey)
+        
+        XCTAssertEqual(provider.fileURL, fileURL)
+        
+        let value = try? await provider.data
+        XCTAssertEqual(value, testImageData)
         try! fm.removeItem(at: fileURL)
+    }
+    #endif
+    #endif
+    
+    func testLocalFileImageDataProviderMainQueue() {
+        let fm = FileManager.default
+        let document = try! fm.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        let fileURL = document.appendingPathComponent("test")
+        try! testImageData.write(to: fileURL)
+        
+        let provider = LocalFileImageDataProvider(fileURL: fileURL, loadingQueue: .mainCurrentOrAsync)
+        XCTAssertEqual(provider.cacheKey, fileURL.localFileCacheKey)
+        XCTAssertEqual(provider.fileURL, fileURL)
+        
+        var called = false
+        provider.data { result in
+            XCTAssertEqual(result.value, testImageData)
+            try! fm.removeItem(at: fileURL)
+            called = true
+        }
+
+        XCTAssertTrue(called)
+    }
+    
+    #if swift(>=5.5)
+    #if canImport(_Concurrency)
+    @available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+    func testLocalFileImageDataProviderMainQueueAsync() async {
+        let fm = FileManager.default
+        let document = try! fm.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+        let fileURL = document.appendingPathComponent("test")
+        try! testImageData.write(to: fileURL)
+        
+        let provider = LocalFileImageDataProvider(fileURL: fileURL, loadingQueue: .mainCurrentOrAsync)
+        XCTAssertEqual(provider.cacheKey, fileURL.localFileCacheKey)
+        XCTAssertEqual(provider.fileURL, fileURL)
+        
+        var called = false
+        let value = try? await provider.data
+        XCTAssertEqual(value, testImageData)
+        try! fm.removeItem(at: fileURL)
+        called = true
+
+        XCTAssertTrue(called)
+    }
+    #endif
+    #endif
+    
+    func testLocalFileCacheKey() {
+        let url1 = URL(string: "file:///Users/onevcat/Library/Developer/CoreSimulator/Devices/ABC/data/Containers/Bundle/Application/DEF/Kingfisher-Demo.app/images/kingfisher-1.jpg")!
+        XCTAssertEqual(url1.localFileCacheKey, "\(URL.localFileCacheKeyPrefix)/Kingfisher-Demo.app/images/kingfisher-1.jpg")
+    
+        let url2 = URL(string: "file:///private/var/containers/Bundle/Application/ABC/Kingfisher-Demo.app/images/kingfisher-1.jpg")!
+        XCTAssertEqual(url2.localFileCacheKey, "\(URL.localFileCacheKeyPrefix)/Kingfisher-Demo.app/images/kingfisher-1.jpg")
+        
+        let url3 = URL(string: "file:///private/var/containers/Bundle/Application/ABC/Kingfisher-Demo.app/images/kingfisher-1.jpg?foo=bar")!
+        XCTAssertEqual(url3.localFileCacheKey, "\(URL.localFileCacheKeyPrefix)/Kingfisher-Demo.app/images/kingfisher-1.jpg?foo=bar")
+        
+        let url4 = URL(string: "file:///private/var/containers/Bundle/Application/ABC/Kingfisher-Demo.appex/images/kingfisher-1.jpg")!
+        XCTAssertEqual(url4.localFileCacheKey, "\(URL.localFileCacheKeyPrefix)/Kingfisher-Demo.appex/images/kingfisher-1.jpg")
+        
+        let url5 = URL(string: "file:///private/var/containers/Bundle/Application/ABC/Kingfisher-Demo.other/images/kingfisher-1.jpg")!
+        XCTAssertEqual(url5.localFileCacheKey, "\(URL.localFileCacheKeyPrefix)///private/var/containers/Bundle/Application/ABC/Kingfisher-Demo.other/images/kingfisher-1.jpg")
+    }
+    
+    func testLocalFileExplicitKey() {
+        let url1 = URL(string: "file:///Users/onevcat/Library/Developer/CoreSimulator/Devices/ABC/data/Containers/Bundle/Application/DEF/Kingfisher-Demo.app/images/kingfisher-1.jpg")!
+        let imageResource = ImageResource(downloadURL: url1, cacheKey: "hello")
+        let source = imageResource.convertToSource()
+        XCTAssertEqual(source.cacheKey, "hello")
     }
     
     func testBase64ImageDataProvider() {

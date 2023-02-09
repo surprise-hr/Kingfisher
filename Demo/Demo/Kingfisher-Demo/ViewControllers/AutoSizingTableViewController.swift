@@ -2,7 +2,7 @@
 //  AutoSizingTableViewController.swift
 //  Kingfisher
 //
-//  Created by JP20028 on 2021/03/15.
+//  Created by onevcat on 2021/03/15.
 //
 //  Copyright (c) 2021 Wei Wang <onevcat@gmail.com>
 //
@@ -63,9 +63,9 @@ class AutoSizingTableViewController: UIViewController {
         UIView.setAnimationsEnabled(false)
     }
     
-    override func viewDidDisappear(_ animated: Bool) {
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
         UIView.setAnimationsEnabled(true)
-        super.viewDidDisappear(animated)
     }
 }
 
