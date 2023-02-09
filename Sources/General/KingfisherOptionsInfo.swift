@@ -307,6 +307,7 @@ public struct KingfisherParsedOptionsInfo {
     public var alternativeSources: [Source]? = nil
     public var retryStrategy: RetryStrategy? = nil
     public var lowDataModeSource: Source? = nil
+    public var contentMode: ContentMode = .none
 
     var onDataReceived: [DataReceivingSideEffect]? = nil
     

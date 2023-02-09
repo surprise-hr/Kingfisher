@@ -64,6 +64,14 @@ public struct KFAnimatedImageViewRepresenter: UIViewRepresentable, KFImageHoldin
         self.context.renderConfigurations.forEach { $0(view) }
         
         view.image = image
+        switch self.context.options.contentMode {
+        case .aspectFit:
+            view.contentMode = .scaleAspectFit
+        case .aspectFill:
+            view.contentMode = .scaleToFill
+        case .none:
+            break
+        }
         
         // Allow SwiftUI scale (fit/fill) working fine.
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -88,6 +96,7 @@ struct KFAnimatedImage_Previews: PreviewProvider {
                 .placeholder {
                     ProgressView()
                 }
+                .contentMode(.aspectFit)
                 .padding()
         }
     }

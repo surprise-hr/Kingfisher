@@ -576,6 +576,11 @@ extension KFOptionSetter {
             ResizingImageProcessor(referenceSize: referenceSize, mode: mode)
         )
     }
+    
+    public func contentMode(_ mode: ContentMode = .none) -> Self {
+        options.contentMode = mode
+        return self
+    }
 }
 
 // MARK: - Cache Serializer
