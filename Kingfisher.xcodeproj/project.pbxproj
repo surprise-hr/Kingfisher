@@ -26,7 +26,7 @@
 		4BD821672189FD330084CC21 /* SessionDataTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BD821662189FD330084CC21 /* SessionDataTask.swift */; };
 		4BE688F722FD513100B11168 /* NSButton+Kingfisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12AB6AD215D2BB50013BA68 /* NSButton+Kingfisher.swift */; };
 		4BE688F822FD513700B11168 /* WKInterfaceImage+Kingfisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12AB6AF215D2BB50013BA68 /* WKInterfaceImage+Kingfisher.swift */; };
-		6FDA5D882994E69E00F9E9B1 /* StubHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDA5D872994E69E00F9E9B1 /* StubHelpers.swift */; };
+		6FDA5D892994E73700F9E9B1 /* StubHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FDA5D872994E69E00F9E9B1 /* StubHelpers.swift */; };
 		76FB4FD2262D773E006D15F8 /* GraphicsContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76FB4FD1262D773E006D15F8 /* GraphicsContext.swift */; };
 		C9286407228584EB00257182 /* ImageProgressive.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9286406228584EB00257182 /* ImageProgressive.swift */; };
 		D1132C9725919F69003E528D /* KFOptionsSetter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1132C9625919F69003E528D /* KFOptionsSetter.swift */; };
@@ -805,7 +805,6 @@
 				D12AB6D8215D2BB50013BA68 /* ImageTransition.swift in Sources */,
 				D1A37BE8215D365A009B39B7 /* ExtensionHelpers.swift in Sources */,
 				C9286407228584EB00257182 /* ImageProgressive.swift in Sources */,
-				6FDA5D882994E69E00F9E9B1 /* StubHelpers.swift in Sources */,
 				D12AB6DC215D2BB50013BA68 /* ImageProcessor.swift in Sources */,
 				D12AB6D4215D2BB50013BA68 /* Image.swift in Sources */,
 				D1AEB09425890DE7008556DF /* ImageBinder.swift in Sources */,
@@ -872,6 +871,7 @@
 				D16FEA4523078C63006E67D5 /* ASIHTTPRequestStub.m in Sources */,
 				D16FEA4423078C63006E67D5 /* LSHTTPStubURLProtocol.m in Sources */,
 				D12E0C511C47F23500AC98AD /* ImageDownloaderTests.swift in Sources */,
+				6FDA5D892994E73700F9E9B1 /* StubHelpers.swift in Sources */,
 				D16FEA4A23078C63006E67D5 /* NSString+Matcheable.m in Sources */,
 				D16FEA4723078C63006E67D5 /* LSASIHTTPRequestAdapter.m in Sources */,
 				D16FEA4F23078C63006E67D5 /* LSStringMatcher.m in Sources */,

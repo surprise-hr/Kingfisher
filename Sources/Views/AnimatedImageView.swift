@@ -269,6 +269,8 @@ open class AnimatedImageView: UIImageView {
             let animator = Animator(animationFrames: sequence,
                                     contentMode: contentMode,
                                     size: targetSize,
+                                    imageSize: sequence.first?.kf.size ?? .zero,
+                                    imageScale: sequence.first?.kf.scale ?? 0,
                                     repeatCount: repeatCount,
                                     duration: duration)
             animator.delegate = self
@@ -284,7 +286,7 @@ open class AnimatedImageView: UIImageView {
     // Reset the animator.
     public func reset() {
         animator = nil
-        if let imageSource = image?.kf.imageSource {
+        if let image = image, let imageSource = image.kf.imageSource {
             let targetSize = bounds.scaled(UIScreen.main.scale).size
             let animator = Animator(
                 imageSource: imageSource,
@@ -405,7 +407,7 @@ extension AnimatedImageView {
         /// The maximum count of image frames that needs preload.
         public let maxFrameCount: Int
 
-        private let imageSource: CGImageSource
+        private let imageSource: CGImageSource?
         private let maxRepeatCount: RepeatCount
 
         private let maxTimeStep: TimeInterval = 1.0
@@ -510,11 +512,15 @@ extension AnimatedImageView {
         init(animationFrames: [UIImage],
              contentMode mode: UIView.ContentMode,
              size: CGSize,
+             imageSize: CGSize,
+             imageScale: CGFloat,
              repeatCount: RepeatCount,
              duration: TimeInterval) {
             loopDuration = duration
             self.contentMode = mode
             self.size = size
+            self.imageSize = imageSize
+            self.imageScale = imageScale
             self.maxFrameCount = animationFrames.count
             self.frameCount = animationFrames.count
             self.maxRepeatCount = repeatCount
@@ -595,7 +601,8 @@ extension AnimatedImageView {
                 options = nil
             }
 
-            guard let cgImage = CGImageSourceCreateImageAtIndex(imageSource, index, options as CFDictionary?) else {
+            guard let imageSource = imageSource,
+                  let cgImage = CGImageSourceCreateImageAtIndex(imageSource, index, options as CFDictionary?) else {
                 return nil
             }
             
