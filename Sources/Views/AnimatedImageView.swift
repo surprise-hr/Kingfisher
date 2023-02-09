@@ -225,9 +225,25 @@ open class AnimatedImageView: UIImageView {
             displayLink.isPaused = true
         }
     }
-    
+
+    /// Sets the current playback to the specified position.
+    ///
+    /// - Parameter position: The normalized position which has to be set. Takes values in range `0...1`.
+    public func seek(to position: Float) {
+        guard (0.0...1.0).contains(position) else { return }
+        guard let animator = animator else { return }
+        let index = Int(Float(animator.frameCount) * position)
+        guard let currentFrame = animator.frame(at: index) else { return }
+        animator.currentFrameIndex = index
+        layer.contents = currentFrame.cgImage
+    }
+
     override open func display(_ layer: CALayer) {
-        layer.contents = animator?.currentFrameImage?.cgImage ?? image?.cgImage
+        if let currentFrame = animator?.currentFrameImage {
+            layer.contents = currentFrame.cgImage
+        } else {
+            layer.contents = image?.cgImage
+        }
     }
     
     override open func didMoveToWindow() {
@@ -242,13 +258,33 @@ open class AnimatedImageView: UIImageView {
 
     // This is for back compatibility that using regular `UIImageView` to show animated image.
     override func shouldPreloadAllAnimation() -> Bool {
-        return false
+        false
+    }
+    
+    public func load(sequence: [UIImage], duration: TimeInterval) {
+        animator = nil
+        
+        if !sequence.isEmpty {
+            let targetSize = bounds.scaled(UIScreen.main.scale).size
+            let animator = Animator(animationFrames: sequence,
+                                    contentMode: contentMode,
+                                    size: targetSize,
+                                    repeatCount: repeatCount,
+                                    duration: duration)
+            animator.delegate = self
+            animator.needsPrescaling = needsPrescaling
+            animator.backgroundDecode = backgroundDecode
+            animator.prepareFramesAsynchronously()
+            self.animator = animator
+        }
+        
+        didMove()
     }
 
     // Reset the animator.
-    private func reset() {
+    public func reset() {
         animator = nil
-        if let image = image, let imageSource = image.kf.imageSource {
+        if let imageSource = image?.kf.imageSource {
             let targetSize = bounds.scaled(UIScreen.main.scale).size
             let animator = Animator(
                 imageSource: imageSource,
@@ -270,7 +306,7 @@ open class AnimatedImageView: UIImageView {
     
     private func didMove() {
         if autoPlayAnimatedImage && animator != nil {
-            if let _ = superview, let _ = window {
+            if let _ = superview, let _ = window, !isHidden {
                 startAnimating()
             } else {
                 stopAnimating()
@@ -374,7 +410,7 @@ extension AnimatedImageView {
 
         private let maxTimeStep: TimeInterval = 1.0
         private let animatedFrames = SafeArray<AnimatedFrame>()
-        private var frameCount = 0
+        private(set) var frameCount = 0
         private var timeSinceLastFrameChange: TimeInterval = 0.0
         private var currentRepeatCount: UInt = 0
 
@@ -470,7 +506,22 @@ extension AnimatedImageView {
             
             GraphicsContext.begin(size: imageSize, scale: imageScale)
         }
-        
+
+        init(animationFrames: [UIImage],
+             contentMode mode: UIView.ContentMode,
+             size: CGSize,
+             repeatCount: RepeatCount,
+             duration: TimeInterval) {
+            loopDuration = duration
+            self.contentMode = mode
+            self.size = size
+            self.maxFrameCount = animationFrames.count
+            self.frameCount = animationFrames.count
+            self.maxRepeatCount = repeatCount
+            self.imageSource = nil
+            animationFrames.forEach({ animatedFrames.append(.init(image: $0, duration: duration / Double(frameCount))) })
+        }
+
         deinit {
             resetAnimatedFrames()
             GraphicsContext.end()
@@ -488,6 +539,7 @@ extension AnimatedImageView {
         }
 
         func prepareFramesAsynchronously() {
+            guard let imageSource = imageSource else { return }
             frameCount = Int(CGImageSourceGetCount(imageSource))
             animatedFrames.reserveCapacity(frameCount)
             preloadQueue.async { [weak self] in
@@ -508,6 +560,7 @@ extension AnimatedImageView {
         }
 
         private func setupAnimatedFrames() {
+            guard let imageSource = imageSource else { return }
             resetAnimatedFrames()
 
             var duration: TimeInterval = 0

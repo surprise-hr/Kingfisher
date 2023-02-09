@@ -1,10 +1,19 @@
 //
+<<<<<<<< HEAD:Demo/Demo/Kingfisher-Demo/SwiftUIViews/TransitionViewDemo.swift
 //  TransitionViewDemo.swift
 //  Kingfisher
 //
 //  Created by onevcat on 2021/08/03.
 //
 //  Copyright (c) 2021 Wei Wang <onevcat@gmail.com>
+========
+//  StubHelpers.swift
+//  Kingfisher
+//
+//  Created by Wei Wang on 2018/10/12.
+//
+//  Copyright (c) 2019 Wei Wang <onevcat@gmail.com>
+>>>>>>>> master:Tests/KingfisherTests/Utils/StubHelpers.swift
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +36,7 @@
 import SwiftUI
 import Kingfisher
 
+<<<<<<<< HEAD:Demo/Demo/Kingfisher-Demo/SwiftUIViews/TransitionViewDemo.swift
 @available(iOS 14.0, *)
 struct TransitionViewDemo: View {
     @State private var showDetails = false
@@ -52,4 +62,27 @@ struct TransitionViewDemo_Previews: PreviewProvider {
     static var previews: some View {
         TransitionViewDemo()
     }
+========
+@discardableResult
+func stub(_ url: URL, data: Data, statusCode: Int = 200, length: Int? = nil) -> LSStubResponseDSL {
+    var stubResult = stubRequest("GET", url.absoluteString as NSString).andReturn(statusCode)?.withBody(data as NSData)
+    if let length = length {
+        stubResult = stubResult?.withHeader("Content-Length", "\(length)")
+    }
+    return stubResult!
+}
+
+func delayedStub(_ url: URL, data: Data, statusCode: Int = 200, length: Int? = nil) -> LSStubResponseDSL {
+    let result = stub(url, data: data, statusCode: statusCode, length: length)
+    return result.delay()!
+}
+
+func stub(_ url: URL, errorCode: Int) {
+    let error = NSError(domain: "stubError", code: errorCode, userInfo: nil)
+    stub(url, error: error)
+}
+
+func stub(_ url: URL, error: Error) {
+    return stubRequest("GET", url.absoluteString as NSString).andFailWithError(error)
+>>>>>>>> master:Tests/KingfisherTests/Utils/StubHelpers.swift
 }
